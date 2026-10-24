@@ -1,5 +1,4 @@
 import { buttonLabel, EXAMPLES } from "./examples.js";
-import "./scene.js";
 
 const KEY = "pharos-arb-log";
 const $ = (id) => document.getElementById(id);
