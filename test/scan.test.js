@@ -4,7 +4,7 @@ import { buttonLabel, EXAMPLES } from "../public/examples.js";
 import { formatUnits, parseUnits } from "../lib/format.js";
 import { POOLS, SAMPLE } from "../lib/pools.js";
 import { POOL_CONFIG } from "../public/config.js";
-import { getSqrtRatioAtTick, roundTrip, tickBounds } from "../lib/quote.js";
+import { getSqrtRatioAtTick, quoteSellWpros, roundTrip, tickBounds } from "../lib/quote.js";
 import { evaluateScan } from "../lib/scan.js";
 
 function pool(name, tick, fee, spacing, address, liquidity = 10n ** 24n) {
@@ -71,7 +71,10 @@ test("a spread that clears the minimum prepares two unsigned swaps", () => {
   assert.equal(out.broadcast, false);
   assert.equal(out.executed, false);
   const sellAmount = BigInt(`0x${out.transactions[0].data.slice(2 + 8 + 2 * 64, 2 + 8 + 3 * 64)}`);
+  const sellLimit = BigInt(`0x${out.transactions[0].data.slice(2 + 8 + 3 * 64, 2 + 8 + 4 * 64)}`);
+  const sell = quoteSellWpros({ ...wide[0], amountIn: 10n * 10n ** 18n });
   assert.equal(sellAmount, 10n * 10n ** 18n);
+  assert.equal(sellLimit, sell.sqrtNext);
   const buyAmount = BigInt(`0x${out.transactions[1].data.slice(2 + 8 + 2 * 64, 2 + 8 + 3 * 64)}`);
   assert.equal(buyAmount, (1n << 256n) - 10n * 10n ** 18n);
 });
