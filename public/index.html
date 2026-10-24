@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pharos Arb</title>
+  <meta name="description" content="Compare two WPROS/USDC pools, subtract fees, slippage and gas, and prepare a swap only above the minimum." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,560&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+  </script>
+  <style>
+    :root { --ink: #e7fff8; --muted: #9ec9bc; --amber: #f0b429; --mint: #3ee0c5; --coral: #ff6d7e; --line: rgba(255,255,255,.14); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { color: var(--ink); background: #071410; font: 16px/1.5 Outfit, system-ui, sans-serif; }
+    #stage { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; display: block; }
+    header { position: fixed; z-index: 3; top: 0; left: 0; right: 0; display: flex; align-items: center; padding: 18px 28px; }
+    .brand { color: inherit; text-decoration: none; letter-spacing: .16em; font-size: 13px; font-weight: 600; }
+    .brand b { color: var(--amber); }
+    .lang { margin-left: auto; display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+    .lang button { border: 0; background: transparent; color: var(--muted); padding: 7px 12px; cursor: pointer; font: 600 12px Outfit, sans-serif; }
+    .lang button.on { background: #e7fff8; color: #10241c; }
+    main { position: relative; z-index: 2; min-height: 100vh; display: grid; grid-template-columns: 1fr .95fr; gap: 28px; align-items: center; padding: 88px 32px 28px; }
+    .hero { animation: rise .8s cubic-bezier(.16,.8,.2,1) both; max-width: 36rem; }
+    .kicker { margin: 0 0 10px; letter-spacing: .18em; text-transform: uppercase; font-size: 12px; color: var(--amber); }
+    h1 { margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 560; font-style: italic; font-size: clamp(48px, 6vw, 80px); line-height: .92; }
+    .lead { color: var(--muted); max-width: 42ch; }
+    .rules { display: grid; gap: 8px; margin-top: 18px; }
+    .rules span { border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; color: var(--muted); background: rgba(7,20,16,.45); }
+    .log-label, .status { margin: 12px 0 0; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .status { letter-spacing: 0; text-transform: none; font-size: 14px; min-height: 0; }
+    .dock { background: rgba(7,20,16,.72); border: 1px solid var(--line); border-radius: 28px; padding: 16px; max-height: calc(100vh - 112px); display: flex; flex-direction: column; overflow: auto; backdrop-filter: blur(18px); box-shadow: 0 24px 70px rgba(0,0,0,.35); animation: rise .9s .08s cubic-bezier(.16,.8,.2,1) both; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chips button, input, button { font: inherit; color: var(--ink); }
+    .chips button { border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--muted); border-radius: 999px; padding: 8px 12px; cursor: pointer; }
+    .chips button.on { color: #10241c; background: var(--amber); border-color: transparent; }
+    label { display: block; margin: 10px 0 4px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    input { width: 100%; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: rgba(4,12,10,.7); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    #out { flex: none; }
+    .log { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 0; }
+    .msg { animation: rise .45s cubic-bezier(.16,.8,.2,1) both; }
+    .msg b { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+    .msg.prepare b { color: var(--mint); }
+    .msg.skip b { color: var(--coral); }
+    .msg p { margin: 2px 0; }
+    .detail { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+    pre { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; color: var(--muted); }
+    .row { display: flex; gap: 8px; margin-top: 8px; }
+    .btn { border: 0; border-radius: 999px; padding: 12px 16px; background: var(--amber); color: #10241c; font-weight: 600; cursor: pointer; }
+    .btn:disabled { opacity: .55; }
+    @keyframes rise { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
+    @media (max-width: 900px) {
+      header { padding: 12px 16px; }
+      main { grid-template-columns: 1fr; align-items: start; padding: 64px 16px 16px; gap: 12px; }
+      h1 { font-size: 36px; }
+      .lead { margin: 6px 0 0; font-size: 15px; }
+      .rules { margin-top: 8px; }
+      .dock { order: -1; max-height: none; }
+      .chips { max-height: 22vh; overflow: auto; }
+      #stage { opacity: .75; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero, .dock, .msg { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <header>
+    <a class="brand" href="/"><b>PHAROS</b> ARB</a>
+    <div class="lang"><button type="button" data-lang="en">EN</button><button type="button" data-lang="pt">PT</button></div>
+  </header>
+  <main>
+    <section class="hero">
+      <p class="kicker" id="kicker"></p>
+      <h1 id="title"></h1>
+      <p class="lead" id="lead"></p>
+      <div class="rules" id="rules"></div>
+    </section>
+    <section class="dock">
+      <div class="chips" id="chips"></div>
+      <form id="form">
+        <div class="grid">
+          <div><label for="amount" id="amountL"></label><input id="amount" value="1" inputmode="decimal" /></div>
+          <div><label for="min" id="minL"></label><input id="min" value="0" inputmode="decimal" /></div>
+        </div>
+        <div class="row"><button class="btn" id="go" type="submit"></button></div>
+      </form>
+      <p class="status" id="status"></p>
+      <div id="out"></div>
+      <p class="log-label" id="logLabel"></p>
+      <div class="log" id="log"></div>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
