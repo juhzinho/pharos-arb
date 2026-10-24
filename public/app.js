@@ -1,3 +1,4 @@
+import { POOL_CONFIG } from "./config.js";
 import { buttonLabel, EXAMPLES } from "./examples.js";
 
 const KEY = "pharos-arb-log";
@@ -6,8 +7,8 @@ const copy = {
   en: {
     kicker: "Arbitrage",
     title: "Two prices. One net.",
-    lead: "One scan reads the 0.01% and the 0.30% WPROS/USDC pools in the same block. Fees, in-tick slippage and the gas of the latest swap receipt on each pool come off the spread. Two unsigned swaps are prepared only when the net is above the minimum.",
-    rules: ["Same block, two pools", "Net after fee, slippage and gas", "Nothing is broadcast"],
+    lead: "One scan reads the two WPROS/USDC pools in the same block. Fees, in-tick slippage and the gas of the latest single swap on each pool come off the spread. Two unsigned pool swaps are prepared only when the net is above the minimum.",
+    gasNote: "Gas from the latest single swap on each pool, priced with the 0.01% pool",
     amount: "WPROS to move",
     min: "Minimum net USDC",
     go: "Scan",
@@ -26,8 +27,8 @@ const copy = {
   pt: {
     kicker: "Arbitragem",
     title: "Dois preços. Um líquido.",
-    lead: "Uma leitura olha as pools 0,01% e 0,30% de WPROS/USDC no mesmo bloco. Taxa, deslizamento dentro do tick e o gás do último recibo de troca de cada pool saem do spread. Duas trocas sem assinatura só são preparadas quando o líquido fica acima do mínimo.",
-    rules: ["Mesmo bloco, duas pools", "Líquido depois da taxa, do deslizamento e do gás", "Nada é enviado"],
+    lead: "Uma leitura olha as duas pools de WPROS/USDC no mesmo bloco. Taxa, deslizamento dentro do tick e o gás da última troca única de cada pool saem do spread. Duas trocas sem assinatura na própria pool só são preparadas quando o líquido fica acima do mínimo.",
+    gasNote: "Gás da última troca única de cada pool, com o preço da pool 0,01%",
     amount: "WPROS a mover",
     min: "Líquido mínimo em USDC",
     go: "Ler",
@@ -56,7 +57,13 @@ function paint() {
   $("kicker").textContent = text.kicker;
   $("title").textContent = text.title;
   $("lead").textContent = text.lead;
-  $("rules").replaceChildren(...text.rules.map((line) => {
+  const lines = [
+    ...POOL_CONFIG.map((pool) => lang === "pt"
+      ? `Pool ${pool.name.replace(".", ",")} · taxa ${pool.feePips} · espaçamento ${pool.spacing} · ${pool.address}`
+      : `${pool.name} pool · fee ${pool.feePips} · spacing ${pool.spacing} · ${pool.address}`),
+    text.gasNote,
+  ];
+  $("rules").replaceChildren(...lines.map((line) => {
     const span = document.createElement("span");
     span.textContent = line;
     return span;
@@ -115,6 +122,7 @@ function card(entry) {
   box.append(line(text.slip, entry.costs?.slippage ?? "—"));
   box.append(line(text.gas, entry.costs?.gas ?? "—"));
   box.append(line(text.net, entry.net ?? "—"));
+  box.append(line("executed", "false"));
   box.append(line("broadcast", "false"));
   return box;
 }

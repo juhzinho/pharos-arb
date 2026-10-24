@@ -2,19 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buttonLabel, EXAMPLES } from "../public/examples.js";
 import { formatUnits, parseUnits } from "../lib/format.js";
-import { SAMPLE } from "../lib/pools.js";
+import { POOLS, SAMPLE } from "../lib/pools.js";
+import { POOL_CONFIG } from "../public/config.js";
 import { getSqrtRatioAtTick, roundTrip, tickBounds } from "../lib/quote.js";
 import { evaluateScan } from "../lib/scan.js";
 
-function pool(name, tick, fee, spacing, liquidity = 10n ** 24n) {
+function pool(name, tick, fee, spacing, address, liquidity = 10n ** 24n) {
   const { lower, upper } = tickBounds(tick, spacing);
   const sqrtPriceX96 = (getSqrtRatioAtTick(lower) + getSqrtRatioAtTick(upper)) / 2n;
-  return { name, feePips: fee, spacing, tick: Number(lower), liquidity, sqrtPriceX96 };
+  return { name, feePips: fee, spacing, address, tick: Number(lower), liquidity, sqrtPriceX96 };
 }
 
-const wide = [pool("0.01%", -279000, 100, 1), pool("0.30%", -280000, 3000, 60)];
-const flat = [pool("0.01%", -280000, 100, 1), pool("0.30%", -280000, 3000, 60)];
-const thin = [pool("0.01%", -280000, 100, 1, 1000n), pool("0.30%", -280520, 3000, 60, 1000n)];
+const wide = [pool("0.01%", -279000, 100, 1, POOLS[0].address), pool("0.30%", -280000, 3000, 60, POOLS[1].address)];
+const flat = [pool("0.01%", -280000, 100, 1, POOLS[0].address), pool("0.30%", -280000, 3000, 60, POOLS[1].address)];
+const thin = [pool("0.01%", -280000, 100, 1, POOLS[0].address, 1000n), pool("0.30%", -280520, 3000, 60, POOLS[1].address, 1000n)];
 
 function scan(pools, extra = {}) {
   return evaluateScan({
@@ -60,15 +61,19 @@ test("a spread that clears the minimum prepares two unsigned swaps", () => {
   assert.match(out.reason, /Nothing was broadcast/);
   assert.equal(out.transactions.length, 2);
   assert.equal(out.transactions[0].from, SAMPLE);
+  assert.equal(out.transactions[0].to, wide[0].address);
+  assert.equal(out.transactions[1].to, wide[1].address);
+  assert.equal(out.transactions[0].data.slice(0, 10), "0x128acb08");
   assert.equal(out.transactions[0].type, "0x0");
   assert.equal(out.transactions[0].chainId, "0x688");
   assert.equal(out.transactions[0].value, "0x0");
   assert.equal(out.transactions[1].nonce, "0x8");
   assert.equal(out.broadcast, false);
   assert.equal(out.executed, false);
-  const minimum = BigInt(`0x${out.transactions[0].data.slice(2 + 8 + 6 * 64, 2 + 8 + 7 * 64)}`);
-  const trip = roundTrip(wide[0], wide[1], 10n * 10n ** 18n);
-  assert.equal(minimum, trip.sellOut);
+  const sellAmount = BigInt(`0x${out.transactions[0].data.slice(2 + 8 + 2 * 64, 2 + 8 + 3 * 64)}`);
+  assert.equal(sellAmount, 10n * 10n ** 18n);
+  const buyAmount = BigInt(`0x${out.transactions[1].data.slice(2 + 8 + 2 * 64, 2 + 8 + 3 * 64)}`);
+  assert.equal(buyAmount, (1n << 256n) - 10n * 10n ** 18n);
 });
 
 test("a net that only meets the minimum is skipped", () => {
@@ -91,7 +96,7 @@ test("the same price is not taken", () => {
 test("missing gas skips before a transaction is built", () => {
   const out = scan(wide, { swapGas: [120000n, null] });
   assert.equal(out.decision, "skip");
-  assert.match(out.reason, /gas was not measured/);
+  assert.match(out.reason, /single swap was not found/);
   assert.equal(out.costs.gas, null);
   assert.equal(out.transactions, null);
 });
@@ -102,6 +107,13 @@ test("unreadable amounts are not a scan", () => {
   assert.equal(scan(wide, { min: "-1" }).ok, false);
   assert.equal(parseUnits("1.1234567", 6), null);
   assert.equal(formatUnits(-1500000n, 6, 6), "-1.500000");
+});
+
+test("the page configuration is the pools the scan reads", () => {
+  assert.deepEqual(
+    POOL_CONFIG.map((pool) => [pool.name, pool.feePips, pool.spacing, pool.address]),
+    POOLS.map((pool) => [pool.name, pool.feePips, pool.spacing, pool.address]),
+  );
 });
 
 test("example buttons name the values they fill", () => {
