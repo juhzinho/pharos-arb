@@ -47,6 +47,7 @@ const copy = {
 };
 
 let lang = localStorage.getItem("pharos-arb-lang") === "pt" ? "pt" : "en";
+let current = null;
 
 function t() {
   return copy[lang];
@@ -83,6 +84,7 @@ function paint() {
     return button;
   }));
   renderLog();
+  if (current) show(current);
 }
 
 function entries() {
@@ -138,6 +140,7 @@ function remember(entry) {
 }
 
 function show(entry) {
+  current = entry;
   $("status").textContent = "";
   const box = card(entry);
   if (entry.transactions) {
