@@ -198,10 +198,17 @@ function card(entry) {
   return box;
 }
 
-function historyCard(entry) {
+function sameScan(left, right) {
+  return left && right && left.block === right.block && left.at === right.at && left.amount === right.amount && left.net === right.net;
+}
+
+function historyCard(entry, index) {
   const text = t();
-  const item = document.createElement("article");
+  const item = document.createElement("button");
+  item.type = "button";
   item.className = `check ${entry.decision}`;
+  item.dataset.i = String(index);
+  if (sameScan(current, entry)) item.classList.add("on");
   const title = document.createElement("strong");
   title.textContent = `${entry.headline} · ${usdc(entry.net ?? "—")}`;
   const meta = document.createElement("span");
@@ -221,7 +228,7 @@ function renderLog() {
     $("log").replaceChildren(empty);
     return;
   }
-  $("log").replaceChildren(...rows.map(historyCard));
+  $("log").replaceChildren(...rows.map((entry, index) => historyCard(entry, index)));
 }
 
 function remember(entry) {
@@ -240,7 +247,19 @@ function show(entry) {
     box.append(pre);
   }
   $("out").replaceChildren(box);
+  $("out").scrollIntoView({ block: "nearest" });
 }
+
+$("log").addEventListener("click", (event) => {
+  const row = event.target.closest(".check");
+  if (!row) return;
+  const entry = entries()[Number(row.dataset.i)];
+  if (!entry) return;
+  if (entry.amount) $("amount").value = entry.amount;
+  if (entry.min != null) $("min").value = String(entry.min).replace(/\.0+$/, "") || "0";
+  show(entry);
+  paint();
+});
 
 $("chips").addEventListener("click", (event) => {
   const button = event.target.closest("[data-ex]");

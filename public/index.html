@@ -51,12 +51,13 @@
     .meters div { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
     .meters i { display: block; font-style: normal; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
     .meters strong { display: block; margin-top: 2px; font-size: 14px; font-weight: 600; }
-    .check { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+    .check { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; background: var(--chip); color: inherit; font: inherit; text-align: left; cursor: pointer; }
     .check strong { display: block; font-size: 13px; }
     .check span { grid-column: 1; color: var(--muted); font-size: 13px; }
     .check em { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--muted); font-style: normal; font-weight: 700; font-size: 12px; }
     .check.prepare em { color: var(--mint); }
     .check.skip em { color: var(--coral); }
+    .check:hover, .check.on { border-color: var(--amber); }
     pre { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; color: var(--muted); }
     .row { display: flex; gap: 8px; margin-top: 8px; }
     .btn { border: 0; border-radius: 999px; padding: 12px 16px; background: var(--amber); color: var(--btn-ink); font-weight: 600; cursor: pointer; }
