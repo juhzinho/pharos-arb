@@ -272,6 +272,18 @@ function remember(entry) {
   renderLog();
 }
 
+function revealCard() {
+  const run = () => {
+    const dock = document.querySelector(".dock");
+    const top = document.querySelector(".dock-top");
+    const out = $("out");
+    if (!dock || !top || !out?.firstElementChild) return;
+    const gap = out.getBoundingClientRect().top - top.getBoundingClientRect().bottom;
+    if (gap < 8) dock.scrollTop += gap - 12;
+  };
+  requestAnimationFrame(() => requestAnimationFrame(run));
+}
+
 function show(entry) {
   current = entry;
   $("status").textContent = "";
@@ -282,7 +294,7 @@ function show(entry) {
     box.append(pre);
   }
   $("out").replaceChildren(box);
-  $("out").scrollIntoView({ block: "nearest" });
+  revealCard();
 }
 
 $("log").addEventListener("click", (event) => {
@@ -294,7 +306,7 @@ $("log").addEventListener("click", (event) => {
   if (entry.min != null) $("min").value = String(entry.min).replace(/\.0+$/, "") || "0";
   current = entry;
   paint();
-  $("out").scrollIntoView({ block: "nearest" });
+  revealCard();
 });
 
 $("chips").addEventListener("click", (event) => {
