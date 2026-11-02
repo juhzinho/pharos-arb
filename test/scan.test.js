@@ -70,6 +70,12 @@ test("a spread that clears the minimum prepares two unsigned swaps", () => {
   assert.equal(out.transactions[1].nonce, "0x8");
   assert.equal(out.broadcast, false);
   assert.equal(out.executed, false);
+  assert.equal(out.transactions[0].broadcast, false);
+  assert.equal(out.transactions[0].executed, false);
+  assert.equal(out.transactions[1].broadcast, false);
+  assert.ok(out.other);
+  assert.equal(out.other.sell, wide[1].name);
+  assert.equal(out.at, "2025-10-09T08:53:20.000Z");
   const sellAmount = BigInt(`0x${out.transactions[0].data.slice(2 + 8 + 2 * 64, 2 + 8 + 3 * 64)}`);
   const sellLimit = BigInt(`0x${out.transactions[0].data.slice(2 + 8 + 3 * 64, 2 + 8 + 4 * 64)}`);
   const sell = quoteSellWpros({ ...wide[0], amountIn: 10n * 10n ** 18n });

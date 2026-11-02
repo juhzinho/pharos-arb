@@ -23,6 +23,10 @@ const copy = {
     sell: "Sell",
     buy: "Buy",
     block: "Block",
+    at: "At",
+    other: "Other way",
+    light: "Light",
+    dark: "Dark",
   },
   pt: {
     kicker: "Arbitragem",
@@ -43,14 +47,29 @@ const copy = {
     sell: "Vender",
     buy: "Comprar",
     block: "Bloco",
+    at: "Quando",
+    other: "O outro lado",
+    light: "Claro",
+    dark: "Escuro",
   },
 };
 
 let lang = localStorage.getItem("pharos-arb-lang") === "pt" ? "pt" : "en";
+let theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
 let current = null;
 
 function t() {
   return copy[lang];
+}
+
+function applyTheme() {
+  if (theme === "light") document.documentElement.dataset.theme = "light";
+  else delete document.documentElement.dataset.theme;
+  localStorage.setItem("pharos-arb-theme", theme);
+  for (const button of document.querySelectorAll(".theme [data-theme]")) {
+    button.textContent = button.dataset.theme === "dark" ? t().dark : t().light;
+    button.classList.toggle("on", button.dataset.theme === theme);
+  }
 }
 
 function paint() {
@@ -74,6 +93,7 @@ function paint() {
   $("go").textContent = text.go;
   $("logLabel").textContent = text.log;
   document.documentElement.lang = lang;
+  applyTheme();
   for (const button of document.querySelectorAll(".lang button")) button.classList.toggle("on", button.dataset.lang === lang);
   $("chips").replaceChildren(...EXAMPLES.map((row) => {
     const button = document.createElement("button");
@@ -117,8 +137,10 @@ function card(entry) {
   reason.textContent = entry.reason;
   box.append(title, reason);
   box.append(line(text.block, entry.block));
+  if (entry.at) box.append(line(text.at, entry.at));
   for (const source of entry.sources) box.append(line(source.name, `${source.price} USDC`));
   if (entry.sell) box.append(line(text.sell, entry.sell), line(text.buy, entry.buy));
+  if (entry.other) box.append(line(text.other, `${entry.other.sell} → ${entry.other.buy} · ${text.net} ${entry.other.net}`));
   box.append(line(text.gross, entry.gross ?? "—"));
   box.append(line(text.fee, entry.costs?.fee ?? "—"));
   box.append(line(text.slip, entry.costs?.slippage ?? "—"));
@@ -159,6 +181,13 @@ $("chips").addEventListener("click", (event) => {
   $("min").value = row.min;
   paint();
 });
+
+for (const button of document.querySelectorAll(".theme [data-theme]")) {
+  button.addEventListener("click", () => {
+    theme = button.dataset.theme === "light" ? "light" : "dark";
+    applyTheme();
+  });
+}
 
 for (const button of document.querySelectorAll(".lang button")) {
   button.addEventListener("click", () => {
