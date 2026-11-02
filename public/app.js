@@ -36,7 +36,7 @@ const copy = {
   pt: {
     kicker: "Arbitragem",
     title: "Dois preços. Um líquido.",
-    lead: "Uma leitura pega as pools de 0,01% e 0,30% de WPROS/USDC no mesmo bloco. A taxa da pool, o deslizamento no tick e o gás da última troca única de cada pool saem do spread. Só prepara duas trocas sem assinatura quando o líquido fica acima do mínimo.",
+    lead: "Um escaneamento lê as pools de 0,01% e 0,30% de WPROS/USDC no mesmo bloco. A taxa da pool, o deslizamento no tick e o gás da última troca única de cada pool saem do spread. Prepara duas trocas sem assinatura só quando o líquido fica acima do mínimo.",
     gasNote: "O gás vem da última troca única de cada pool. O PROS nativo usa o preço da pool de 0,01%, porque o WPROS é o PROS envelopado.",
     pool: (name, spacing, address) => `${name} FaroSwap · espaçamento de tick ${spacing} · ${address}`,
     amount: "WPROS a mover",
