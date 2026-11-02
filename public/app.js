@@ -32,6 +32,13 @@ const copy = {
     skip: "Skip",
     prepare: "Prepare",
     usdc: "USDC",
+    headSkip: "Skip this scan.",
+    headGo: "Prepare the two swaps.",
+    tick: (amount, name) => `${amount} WPROS does not stay inside the ${name} pool tick, so slippage cannot be estimated.`,
+    both: (amount) => `${amount} WPROS does not stay inside either pool tick, so slippage cannot be estimated.`,
+    noGas: "A recent single swap was not found, so gas was not measured.",
+    below: (net, min) => `Net ${net} USDC is not above ${min} USDC.`,
+    above: (net, min) => `Net ${net} USDC is above ${min} USDC. Two unsigned swaps are ready. Nothing was broadcast.`,
   },
   pt: {
     kicker: "Arbitragem",
@@ -61,6 +68,13 @@ const copy = {
     skip: "Pular",
     prepare: "Preparar",
     usdc: "USDC",
+    headSkip: "Pular este escaneamento.",
+    headGo: "Preparar as duas trocas.",
+    tick: (amount, name) => `${amount} WPROS não cabe no tick da pool ${name}, então o deslizamento não pode ser estimado.`,
+    both: (amount) => `${amount} WPROS não cabe no tick de nenhuma das duas pools, então o deslizamento não pode ser estimado.`,
+    noGas: "Não há uma troca única recente, então o gás não foi medido.",
+    below: (net, min) => `O líquido de ${net} USDC não está acima de ${min} USDC.`,
+    above: (net, min) => `O líquido de ${net} USDC está acima de ${min} USDC. Duas trocas sem assinatura estão prontas. Nada foi enviado.`,
   },
 };
 
@@ -79,7 +93,28 @@ function shortAddr(value) {
 }
 
 function poolName(name) {
-  return lang === "pt" ? String(name).replace(".", ",") : name;
+  const raw = String(name || "");
+  return lang === "pt" ? raw.replace(".", ",") : raw.replace(",", ".");
+}
+
+function headlineOf(entry) {
+  return entry.decision === "prepare" ? t().headGo : t().headSkip;
+}
+
+function reasonOf(entry) {
+  const text = t();
+  if (entry.why === "tick") return text.tick(entry.amount, poolName(entry.limited || ""));
+  if (entry.why === "both") return text.both(entry.amount);
+  if (entry.why === "no-gas") return text.noGas;
+  if (entry.why === "above") return text.above(entry.net, entry.min);
+  if (entry.why === "below") return text.below(entry.net, entry.min);
+  if (entry.net != null) return entry.decision === "prepare" ? text.above(entry.net, entry.min) : text.below(entry.net, entry.min);
+  if (entry.costs?.gas == null && entry.sell) return text.noGas;
+  const saved = String(entry.reason || "");
+  if (/0[.,]01%/.test(saved) && /tick|deslizamento/.test(saved)) return text.tick(entry.amount, poolName("0.01%"));
+  if (/0[.,]30%/.test(saved) && /tick|deslizamento/.test(saved)) return text.tick(entry.amount, poolName("0.30%"));
+  if (/either pool tick|nenhuma das duas/.test(saved)) return text.both(entry.amount);
+  return saved;
 }
 
 function clock(iso) {
@@ -172,17 +207,10 @@ function card(entry) {
   const box = document.createElement("article");
   box.className = `msg ${entry.decision}`;
   const title = document.createElement("b");
-  title.textContent = entry.headline;
+  title.textContent = headlineOf(entry);
   const reason = document.createElement("p");
-  reason.textContent = entry.reason;
+  reason.textContent = reasonOf(entry);
   box.append(title, reason);
-  box.append(line(text.block, entry.block));
-  if (entry.at) box.append(line(text.at, clock(entry.at)));
-  for (const source of entry.sources) box.append(line(poolName(source.name), usdc(source.price)));
-  if (entry.sell) box.append(line(text.sell, poolName(entry.sell)), line(text.buy, poolName(entry.buy)));
-  if (entry.other) {
-    box.append(line(text.other, `${poolName(entry.other.sell)} → ${poolName(entry.other.buy)} · ${usdc(entry.other.net)}`));
-  }
   const meters = document.createElement("div");
   meters.className = "meters";
   meters.append(
@@ -195,6 +223,13 @@ function card(entry) {
     meter("broadcast", "false"),
   );
   box.append(meters);
+  box.append(line(text.block, entry.block));
+  if (entry.at) box.append(line(text.at, clock(entry.at)));
+  for (const source of entry.sources) box.append(line(poolName(source.name), usdc(source.price)));
+  if (entry.sell) box.append(line(text.sell, poolName(entry.sell)), line(text.buy, poolName(entry.buy)));
+  if (entry.other) {
+    box.append(line(text.other, `${poolName(entry.other.sell)} → ${poolName(entry.other.buy)} · ${usdc(entry.other.net)}`));
+  }
   return box;
 }
 
@@ -210,7 +245,7 @@ function historyCard(entry, index) {
   item.dataset.i = String(index);
   if (sameScan(current, entry)) item.classList.add("on");
   const title = document.createElement("strong");
-  title.textContent = `${entry.headline} · ${usdc(entry.net ?? "—")}`;
+  title.textContent = `${headlineOf(entry)} · ${usdc(entry.net ?? "—")}`;
   const meta = document.createElement("span");
   meta.textContent = `${entry.amount} WPROS · ${text.block} ${entry.block}`;
   const flag = document.createElement("em");
@@ -257,8 +292,9 @@ $("log").addEventListener("click", (event) => {
   if (!entry) return;
   if (entry.amount) $("amount").value = entry.amount;
   if (entry.min != null) $("min").value = String(entry.min).replace(/\.0+$/, "") || "0";
-  show(entry);
+  current = entry;
   paint();
+  $("out").scrollIntoView({ block: "nearest" });
 });
 
 $("chips").addEventListener("click", (event) => {

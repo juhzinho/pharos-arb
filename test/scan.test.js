@@ -52,12 +52,14 @@ test("a size that leaves the tick is skipped and nothing is prepared", () => {
   assert.equal(out.broadcast, false);
   assert.equal(out.executed, false);
   assert.equal(out.sources.length, 2);
+  assert.ok(out.why === "tick" || out.why === "both");
 });
 
 test("a spread that clears the minimum prepares two unsigned swaps", () => {
   const out = scan(wide, { amount: "10", min: "0" });
   assert.equal(out.headline, "Prepare the two swaps.");
   assert.equal(out.decision, "prepare");
+  assert.equal(out.why, "above");
   assert.match(out.reason, /Nothing was broadcast/);
   assert.equal(out.transactions.length, 2);
   assert.equal(out.transactions[0].from, SAMPLE);
@@ -89,6 +91,7 @@ test("a net that only meets the minimum is skipped", () => {
   const cleared = scan(wide, { amount: "1", min: "0" });
   const same = scan(wide, { amount: "1", min: cleared.net });
   assert.equal(same.decision, "skip");
+  assert.equal(same.why, "below");
   assert.match(same.reason, /is not above/);
   assert.equal(same.transactions, null);
 });
@@ -105,6 +108,7 @@ test("the same price is not taken", () => {
 test("missing gas skips before a transaction is built", () => {
   const out = scan(wide, { swapGas: [120000n, null] });
   assert.equal(out.decision, "skip");
+  assert.equal(out.why, "no-gas");
   assert.match(out.reason, /single swap was not found/);
   assert.equal(out.costs.gas, null);
   assert.equal(out.transactions, null);

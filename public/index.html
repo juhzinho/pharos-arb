@@ -32,6 +32,7 @@
     .log-label { letter-spacing: .12em; text-transform: uppercase; font-size: 11px; }
     .status { min-height: 0; }
     .dock { background: var(--paper); border: 1px solid var(--line); border-radius: 28px; padding: 16px; max-height: calc(100vh - 112px); display: flex; flex-direction: column; overflow: auto; }
+    .dock-top { position: sticky; top: -16px; z-index: 1; background: var(--paper); padding: 16px 0 8px; margin-top: -16px; }
     .chips { display: flex; gap: 8px; flex-wrap: wrap; }
     .chips button, input, button { font: inherit; color: var(--ink); }
     .chips button { border: 1px solid var(--line); background: var(--chip); color: var(--muted); border-radius: 999px; padding: 8px 12px; cursor: pointer; }
@@ -39,7 +40,7 @@
     label { display: block; margin: 10px 0 4px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
     input { width: 100%; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--field); }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    #out { flex: none; }
+    #out { flex: none; scroll-margin-top: 168px; }
     .log { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 0; }
     .msg { margin-top: 12px; border: 1px solid var(--line); border-radius: 16px; padding: 12px; background: var(--chip); }
     .msg b { display: block; font-size: 13px; }
@@ -69,6 +70,8 @@
       .lead { margin: 6px 0 0; font-size: 15px; }
       .rules { margin-top: 8px; }
       .dock { order: -1; max-height: none; }
+      .dock-top { top: 76px; }
+      #out { scroll-margin-top: 220px; }
       .meters { grid-template-columns: 1fr; }
     }
   </style>
@@ -92,15 +95,17 @@
       <div class="rules" id="rules"></div>
     </section>
     <section class="dock">
-      <div class="chips" id="chips"></div>
-      <form id="form">
-        <div class="grid">
-          <div><label for="amount" id="amountL"></label><input id="amount" value="1" inputmode="decimal" /></div>
-          <div><label for="min" id="minL"></label><input id="min" value="0" inputmode="decimal" /></div>
-        </div>
-        <div class="row"><button class="btn" id="go" type="submit"></button></div>
-      </form>
-      <p class="status" id="status"></p>
+      <div class="dock-top">
+        <div class="chips" id="chips"></div>
+        <form id="form">
+          <div class="grid">
+            <div><label for="amount" id="amountL"></label><input id="amount" value="1" inputmode="decimal" /></div>
+            <div><label for="min" id="minL"></label><input id="min" value="0" inputmode="decimal" /></div>
+          </div>
+          <div class="row"><button class="btn" id="go" type="submit"></button></div>
+        </form>
+        <p class="status" id="status"></p>
+      </div>
       <div id="out"></div>
       <p class="log-label" id="logLabel"></p>
       <div class="log" id="log"></div>
