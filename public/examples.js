@@ -5,5 +5,5 @@ export const EXAMPLES = [
 ];
 
 export function buttonLabel(row, lang) {
-  return lang === "pt" ? `${row.amount} WPROS, mínimo ${row.min} USDC` : `${row.amount} WPROS, min ${row.min} USDC`;
+  return lang === "pt" ? `${row.amount} WPROS, mínimo ${row.min} USDC` : `${row.amount} WPROS, minimum ${row.min} USDC`;
 }

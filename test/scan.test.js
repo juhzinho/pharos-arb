@@ -45,7 +45,7 @@ test("fees, slippage and the quoted net add back to the gross spread", () => {
 test("a size that leaves the tick is skipped and nothing is prepared", () => {
   const out = scan(thin, { amount: "10" });
   assert.equal(out.decision, "skip");
-  assert.match(out.reason, /slippage estimate stops/);
+  assert.match(out.reason, /slippage cannot be estimated/);
   assert.match(out.gross, /^-?\d+\.\d{6}$/);
   assert.equal(out.net, null);
   assert.equal(out.transactions, null);
@@ -127,9 +127,9 @@ test("the page configuration is the pools the scan reads", () => {
 
 test("example buttons name the values they fill", () => {
   assert.deepEqual(EXAMPLES.map((row) => buttonLabel(row, "en")), [
-    "1 WPROS, min 0 USDC",
-    "100 WPROS, min 0 USDC",
-    "1 WPROS, min 1 USDC",
+    "1 WPROS, minimum 0 USDC",
+    "100 WPROS, minimum 0 USDC",
+    "1 WPROS, minimum 1 USDC",
   ]);
   assert.equal(buttonLabel(EXAMPLES[0], "pt"), "1 WPROS, mínimo 0 USDC");
 });

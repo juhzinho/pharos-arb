@@ -7,14 +7,16 @@ const copy = {
   en: {
     kicker: "Arbitrage",
     title: "Two prices. One net.",
-    lead: "One scan reads the two WPROS/USDC pools in the same block. Fees, in-tick slippage and the gas of the latest single swap on each pool come off the spread. Two unsigned pool swaps are prepared only when the net is above the minimum.",
-    gasNote: "Gas from the latest single swap on each pool. PROS is priced with the 0.01% pool, because WPROS is wrapped PROS.",
+    lead: "One scan reads the 0.01% and 0.30% WPROS/USDC pools in the same block. Swap fees, in-tick slippage and the gas of the latest single swap on each pool are subtracted from the spread. Two unsigned pool swaps are prepared only when the net is above the minimum.",
+    gasNote: "Gas is taken from the latest single swap on each pool. Native PROS is priced from the 0.01% pool, because WPROS is wrapped PROS.",
+    pool: (name, spacing, address) => `${name} FaroSwap · tick spacing ${spacing} · ${address}`,
     amount: "WPROS to move",
     min: "Minimum net USDC",
     go: "Scan",
     reading: "Reading the two pools…",
     failed: "The pools could not be read.",
     log: "Scan log",
+    empty: "No scans stored yet.",
     gross: "Gross",
     fee: "Fee",
     slip: "Slippage",
@@ -23,22 +25,27 @@ const copy = {
     sell: "Sell",
     buy: "Buy",
     block: "Block",
-    at: "At",
+    at: "Time",
     other: "Other way",
     light: "Light",
     dark: "Dark",
+    skip: "Skip",
+    prepare: "Prepare",
+    usdc: "USDC",
   },
   pt: {
     kicker: "Arbitragem",
     title: "Dois preços. Um líquido.",
-    lead: "Uma leitura olha as duas pools de WPROS/USDC no mesmo bloco. Taxa, deslizamento dentro do tick e o gás da última troca única de cada pool saem do spread. Duas trocas sem assinatura na própria pool só são preparadas quando o líquido fica acima do mínimo.",
-    gasNote: "Gás da última troca única de cada pool. O PROS usa o preço da pool 0,01%, porque WPROS é PROS embrulhado.",
+    lead: "Uma leitura pega as pools de 0,01% e 0,30% de WPROS/USDC no mesmo bloco. A taxa da pool, o deslizamento no tick e o gás da última troca única de cada pool saem do spread. Só prepara duas trocas sem assinatura quando o líquido fica acima do mínimo.",
+    gasNote: "O gás vem da última troca única de cada pool. O PROS nativo usa o preço da pool de 0,01%, porque o WPROS é o PROS envelopado.",
+    pool: (name, spacing, address) => `${name} FaroSwap · espaçamento de tick ${spacing} · ${address}`,
     amount: "WPROS a mover",
     min: "Líquido mínimo em USDC",
-    go: "Ler",
-    reading: "Lendo as duas pools…",
+    go: "Escanear",
+    reading: "Escaneando as duas pools…",
     failed: "As pools não puderam ser lidas.",
-    log: "Registro das leituras",
+    log: "Escaneamentos",
+    empty: "Ainda não há escaneamentos guardados.",
     gross: "Bruto",
     fee: "Taxa",
     slip: "Deslizamento",
@@ -47,10 +54,13 @@ const copy = {
     sell: "Vender",
     buy: "Comprar",
     block: "Bloco",
-    at: "Quando",
+    at: "Hora",
     other: "O outro lado",
     light: "Claro",
     dark: "Escuro",
+    skip: "Pular",
+    prepare: "Preparar",
+    usdc: "USDC",
   },
 };
 
@@ -60,6 +70,28 @@ let current = null;
 
 function t() {
   return copy[lang];
+}
+
+function shortAddr(value) {
+  const raw = String(value || "");
+  if (raw.length < 12) return raw;
+  return `${raw.slice(0, 6)}…${raw.slice(-4)}`;
+}
+
+function poolName(name) {
+  return lang === "pt" ? String(name).replace(".", ",") : name;
+}
+
+function clock(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+}
+
+function usdc(value) {
+  if (value == null || value === "—") return "—";
+  return `${value} ${t().usdc}`;
 }
 
 function applyTheme() {
@@ -78,9 +110,7 @@ function paint() {
   $("title").textContent = text.title;
   $("lead").textContent = text.lead;
   const lines = [
-    ...POOL_CONFIG.map((pool) => lang === "pt"
-      ? `Pool ${pool.name.replace(".", ",")} · taxa ${pool.feePips} · espaçamento ${pool.spacing} · ${pool.address}`
-      : `${pool.name} pool · fee ${pool.feePips} · spacing ${pool.spacing} · ${pool.address}`),
+    ...POOL_CONFIG.map((pool) => text.pool(poolName(pool.name), pool.spacing, shortAddr(pool.address))),
     text.gasNote,
   ];
   $("rules").replaceChildren(...lines.map((line) => {
@@ -127,6 +157,16 @@ function line(label, value) {
   return p;
 }
 
+function meter(label, value) {
+  const box = document.createElement("div");
+  const name = document.createElement("i");
+  name.textContent = label;
+  const strong = document.createElement("strong");
+  strong.textContent = value;
+  box.append(name, strong);
+  return box;
+}
+
 function card(entry) {
   const text = t();
   const box = document.createElement("article");
@@ -137,22 +177,51 @@ function card(entry) {
   reason.textContent = entry.reason;
   box.append(title, reason);
   box.append(line(text.block, entry.block));
-  if (entry.at) box.append(line(text.at, entry.at));
-  for (const source of entry.sources) box.append(line(source.name, `${source.price} USDC`));
-  if (entry.sell) box.append(line(text.sell, entry.sell), line(text.buy, entry.buy));
-  if (entry.other) box.append(line(text.other, `${entry.other.sell} → ${entry.other.buy} · ${text.net} ${entry.other.net}`));
-  box.append(line(text.gross, entry.gross ?? "—"));
-  box.append(line(text.fee, entry.costs?.fee ?? "—"));
-  box.append(line(text.slip, entry.costs?.slippage ?? "—"));
-  box.append(line(text.gas, entry.costs?.gas ?? "—"));
-  box.append(line(text.net, entry.net ?? "—"));
-  box.append(line("executed", "false"));
-  box.append(line("broadcast", "false"));
+  if (entry.at) box.append(line(text.at, clock(entry.at)));
+  for (const source of entry.sources) box.append(line(poolName(source.name), usdc(source.price)));
+  if (entry.sell) box.append(line(text.sell, poolName(entry.sell)), line(text.buy, poolName(entry.buy)));
+  if (entry.other) {
+    box.append(line(text.other, `${poolName(entry.other.sell)} → ${poolName(entry.other.buy)} · ${usdc(entry.other.net)}`));
+  }
+  const meters = document.createElement("div");
+  meters.className = "meters";
+  meters.append(
+    meter(text.gross, usdc(entry.gross)),
+    meter(text.fee, usdc(entry.costs?.fee)),
+    meter(text.slip, usdc(entry.costs?.slippage)),
+    meter(text.gas, usdc(entry.costs?.gas)),
+    meter(text.net, usdc(entry.net)),
+    meter("executed", "false"),
+    meter("broadcast", "false"),
+  );
+  box.append(meters);
   return box;
 }
 
+function historyCard(entry) {
+  const text = t();
+  const item = document.createElement("article");
+  item.className = `check ${entry.decision}`;
+  const title = document.createElement("strong");
+  title.textContent = `${entry.headline} · ${usdc(entry.net ?? "—")}`;
+  const meta = document.createElement("span");
+  meta.textContent = `${entry.amount} WPROS · ${text.block} ${entry.block}`;
+  const flag = document.createElement("em");
+  flag.textContent = entry.decision === "prepare" ? text.prepare : text.skip;
+  item.append(title, meta, flag);
+  return item;
+}
+
 function renderLog() {
-  $("log").replaceChildren(...entries().map(card));
+  const rows = entries();
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.className = "detail";
+    empty.textContent = t().empty;
+    $("log").replaceChildren(empty);
+    return;
+  }
+  $("log").replaceChildren(...rows.map(historyCard));
 }
 
 function remember(entry) {

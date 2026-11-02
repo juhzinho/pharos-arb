@@ -9,4 +9,4 @@ npm test
 npm run web
 ```
 
-Open http://localhost:3040. The example buttons fill the amount and the minimum. Scan runs only from the Scan button.
+Open http://localhost:3040. The example buttons fill the amount and the minimum. The scan runs only from the Scan button.
